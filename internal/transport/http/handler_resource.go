@@ -48,6 +48,10 @@ func (h *resourceHandler) uploadURL(ctx *fasthttp.RequestCtx) {
 		respondError(ctx, fasthttp.StatusBadRequest, "invalid json")
 		return
 	}
+	if req.Filename == "" {
+		respondError(ctx, 400, "filename is required")
+		return
+	}
 	resp, err := h.svc.GenerateUploadURL(context.TODO(), projectID, req)
 	if err != nil {
 		respondError(ctx, fasthttp.StatusInternalServerError, err.Error())

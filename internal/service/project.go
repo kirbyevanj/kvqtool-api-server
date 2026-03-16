@@ -99,10 +99,22 @@ func (s *ProjectService) Update(ctx context.Context, id uuid.UUID, req types.Upd
 }
 
 func (s *ProjectService) Delete(ctx context.Context, id uuid.UUID) error {
-	_, err := s.db.NewDelete().Model((*models.Project)(nil)).Where("id = ? AND user_id = ?", id, defaultUserID).Exec(ctx)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	tx.NewDelete().Model((*models.Job)(nil)).Where("project_id = ?", id).Exec(ctx)
+	tx.NewDelete().Model((*models.Resource)(nil)).Where("project_id = ?", id).Exec(ctx)
+	tx.NewDelete().Model((*models.WorkflowDefinition)(nil)).Where("project_id = ?", id).Exec(ctx)
+	tx.NewDelete().Model((*models.VirtualFolder)(nil)).Where("project_id = ?", id).Exec(ctx)
+	tx.NewDelete().Model((*models.Project)(nil)).Where("id = ? AND user_id = ?", id, defaultUserID).Exec(ctx)
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
 	prefix := "projects/" + id.String() + "/"
 	return s.s3.DeletePrefix(ctx, prefix)
 }

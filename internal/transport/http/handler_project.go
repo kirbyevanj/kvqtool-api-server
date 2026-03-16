@@ -27,6 +27,10 @@ func (h *projectHandler) create(ctx *fasthttp.RequestCtx) {
 		respondError(ctx, fasthttp.StatusBadRequest, "invalid json")
 		return
 	}
+	if req.Name == "" {
+		respondError(ctx, 400, "name is required")
+		return
+	}
 	proj, err := h.svc.Create(context.TODO(), req)
 	if err != nil {
 		respondError(ctx, fasthttp.StatusInternalServerError, err.Error())

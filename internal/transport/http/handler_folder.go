@@ -37,6 +37,10 @@ func (h *folderHandler) create(ctx *fasthttp.RequestCtx) {
 		respondError(ctx, fasthttp.StatusBadRequest, "invalid json")
 		return
 	}
+	if req.Name == "" {
+		respondError(ctx, 400, "name is required")
+		return
+	}
 	folder, err := h.svc.Create(context.TODO(), projectID, req)
 	if err != nil {
 		respondError(ctx, fasthttp.StatusInternalServerError, err.Error())
