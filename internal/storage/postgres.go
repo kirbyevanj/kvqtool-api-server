@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kirbyevanj/kvqtool-kvq-models/models"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -45,6 +46,22 @@ func RunMigrations(ctx context.Context, db *bun.DB, logger *slog.Logger) error {
 		}
 	}
 
+	if err := seedPlaceholderUser(ctx, db); err != nil {
+		return fmt.Errorf("seed user: %w", err)
+	}
+
 	logger.Info("database migrations complete")
 	return nil
+}
+
+var PlaceholderUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
+func seedPlaceholderUser(ctx context.Context, db *bun.DB) error {
+	user := &models.User{
+		ID:          PlaceholderUserID,
+		Email:       "default@kvqtool.local",
+		DisplayName: "Default User",
+	}
+	_, err := db.NewInsert().Model(user).On("CONFLICT (id) DO NOTHING").Exec(ctx)
+	return err
 }
