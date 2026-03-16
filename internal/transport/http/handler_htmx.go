@@ -135,8 +135,6 @@ func renderResourceItem(id, resType, name string) string {
 
 	var typeActions string
 	switch resType {
-	case "media":
-		typeActions = fmt.Sprintf(`<button onclick="playResource('%s')">Play</button>`, id)
 	case "report":
 		typeActions = fmt.Sprintf(`<button onclick="viewReport('%s')">View Charts</button>`, id)
 	case "workflow":
@@ -145,7 +143,7 @@ func renderResourceItem(id, resType, name string) string {
 
 	return fmt.Sprintf(
 		`<div class="resource-item" data-id="%s" data-type="%s">`+
-			`<span class="res-label" onclick="onResourceClick('%s','%s')">%s %s</span>`+
+			`<span class="res-label" ondblclick="onResourceClick('%s','%s')">%s %s</span>`+
 			`<button class="res-menu-btn" onclick="event.stopPropagation();toggleResMenu('%s')">&#8230;</button>`+
 			`<div class="res-menu" id="res-menu-%s" style="display:none">`+
 			`%s`+
