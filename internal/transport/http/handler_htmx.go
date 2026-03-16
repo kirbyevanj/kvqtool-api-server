@@ -1,0 +1,147 @@
+package http
+
+import (
+	"context"
+	"fmt"
+	"html"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/kirbyevanj/kvqtool-api-server/internal/domain"
+	"github.com/kirbyevanj/kvqtool-kvq-models/types"
+	"github.com/valyala/fasthttp"
+)
+
+type htmxHandler struct {
+	projects  domain.ProjectService
+	folders   domain.FolderService
+	resources domain.ResourceService
+}
+
+func (h *htmxHandler) listProjects(ctx *fasthttp.RequestCtx) {
+	projects, err := h.projects.List(context.TODO())
+	if err != nil {
+		ctx.SetStatusCode(500)
+		ctx.SetBodyString("<p>Error loading projects</p>")
+		return
+	}
+
+	var b strings.Builder
+	for _, p := range projects {
+		b.WriteString(fmt.Sprintf(
+			`<div class="project-row" onclick="window.location='/workspace.html?project=%s'">
+				<div>
+					<span class="name">%s</span>
+					<span class="meta">%s — %d resources, %d jobs</span>
+				</div>
+				<div class="actions">
+					<button class="btn btn-sm" onclick="event.stopPropagation()" hx-delete="/v1/projects/%s" hx-target="closest .project-row" hx-swap="outerHTML" hx-confirm="Delete project '%s'?">Delete</button>
+				</div>
+			</div>`,
+			p.ID, html.EscapeString(p.Name), p.CreatedAt,
+			p.ResourceCount, p.JobCount,
+			p.ID, html.EscapeString(p.Name),
+		))
+	}
+
+	if len(projects) == 0 {
+		b.WriteString(`<p style="color:var(--text-dim)">No projects yet. Create one to get started.</p>`)
+	}
+
+	ctx.SetContentType("text/html")
+	ctx.SetStatusCode(200)
+	ctx.SetBodyString(b.String())
+}
+
+func (h *htmxHandler) createProject(ctx *fasthttp.RequestCtx) {
+	name := string(ctx.FormValue("name"))
+	desc := string(ctx.FormValue("description"))
+
+	if name == "" {
+		ctx.SetStatusCode(400)
+		ctx.SetBodyString("<p>Name is required</p>")
+		return
+	}
+
+	_, err := h.projects.Create(context.TODO(), types.CreateProjectRequest{
+		Name:        name,
+		Description: desc,
+	})
+	if err != nil {
+		ctx.SetStatusCode(500)
+		ctx.SetBodyString(fmt.Sprintf("<p>Error: %s</p>", html.EscapeString(err.Error())))
+		return
+	}
+
+	h.listProjects(ctx)
+}
+
+func (h *htmxHandler) sidebar(ctx *fasthttp.RequestCtx) {
+	pidStr, ok := parseUUID(ctx, "project_id")
+	if !ok {
+		ctx.SetStatusCode(400)
+		ctx.SetBodyString("<p>Invalid project ID</p>")
+		return
+	}
+	projectID, err := uuid.Parse(pidStr)
+	if err != nil {
+		ctx.SetStatusCode(400)
+		ctx.SetBodyString("<p>Invalid project ID</p>")
+		return
+	}
+
+	folders, fErr := h.folders.Tree(context.TODO(), projectID)
+	resources, rErr := h.resources.List(context.TODO(), projectID, nil, "")
+
+	var b strings.Builder
+
+	if fErr == nil {
+		for _, f := range folders {
+			renderFolderNode(&b, f, projectID.String())
+		}
+	}
+
+	if rErr == nil {
+		for _, r := range resources {
+			if r.FolderID == nil {
+				icon := resourceIcon(r.ResourceType)
+				b.WriteString(fmt.Sprintf(
+					`<div class="resource-item" data-id="%s" data-type="%s"><span class="resource-icon">%s</span> %s</div>`,
+					r.ID, r.ResourceType, icon, html.EscapeString(r.Name),
+				))
+			}
+		}
+	}
+
+	if b.Len() == 0 {
+		b.WriteString(`<p style="padding:12px;color:var(--text-dim)">No resources yet.</p>`)
+	}
+
+	ctx.SetContentType("text/html")
+	ctx.SetStatusCode(200)
+	ctx.SetBodyString(b.String())
+}
+
+func renderFolderNode(b *strings.Builder, f types.FolderNode, projectID string) {
+	b.WriteString(fmt.Sprintf(
+		`<div class="folder-item" hx-get="/htmx/projects/%s/folders/%s/contents" hx-target="next .folder-children" hx-swap="innerHTML">📁 %s</div><div class="folder-children">`,
+		projectID, f.ID, html.EscapeString(f.Name),
+	))
+	for _, child := range f.Children {
+		renderFolderNode(b, child, projectID)
+	}
+	b.WriteString(`</div>`)
+}
+
+func resourceIcon(t string) string {
+	switch t {
+	case "media":
+		return "🎬"
+	case "workflow":
+		return "⚙️"
+	case "report":
+		return "📊"
+	default:
+		return "📄"
+	}
+}
