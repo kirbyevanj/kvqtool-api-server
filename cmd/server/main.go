@@ -29,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	s3Client, err := storage.NewS3Client(cfg.S3Endpoint, cfg.S3Bucket, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3Region, logger)
+	s3Client, err := storage.NewS3Client(cfg.S3Endpoint, cfg.S3Bucket, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3Region, cfg.S3PublicEndpoint, logger)
 	if err != nil {
 		logger.Error("s3 init failed", "err", err)
 		os.Exit(1)

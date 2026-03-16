@@ -13,13 +13,14 @@ import (
 )
 
 type S3Client struct {
-	client  *s3.Client
-	presign *s3.PresignClient
-	bucket  string
-	logger  *slog.Logger
+	client        *s3.Client
+	presign       *s3.PresignClient
+	publicPresign *s3.PresignClient
+	bucket        string
+	logger        *slog.Logger
 }
 
-func NewS3Client(endpoint, bucket, accessKey, secretKey, region string, logger *slog.Logger) (*S3Client, error) {
+func NewS3Client(endpoint, bucket, accessKey, secretKey, region, publicEndpoint string, logger *slog.Logger) (*S3Client, error) {
 	cfg, err := awsconfig.LoadDefaultConfig(context.Background(),
 		awsconfig.WithRegion(region),
 		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
@@ -33,12 +34,23 @@ func NewS3Client(endpoint, bucket, accessKey, secretKey, region string, logger *
 		o.UsePathStyle = true
 	})
 
-	logger.Info("connected to S3", "endpoint", endpoint, "bucket", bucket)
-	return &S3Client{client: client, presign: s3.NewPresignClient(client), bucket: bucket, logger: logger}, nil
+	publicClient := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(publicEndpoint)
+		o.UsePathStyle = true
+	})
+
+	logger.Info("connected to S3", "endpoint", endpoint, "public", publicEndpoint, "bucket", bucket)
+	return &S3Client{
+		client:        client,
+		presign:       s3.NewPresignClient(client),
+		publicPresign: s3.NewPresignClient(publicClient),
+		bucket:        bucket,
+		logger:        logger,
+	}, nil
 }
 
 func (s *S3Client) PresignPut(ctx context.Context, key, contentType string, expiry time.Duration) (string, error) {
-	req, err := s.presign.PresignPutObject(ctx, &s3.PutObjectInput{
+	req, err := s.publicPresign.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(key),
 		ContentType: aws.String(contentType),
@@ -50,7 +62,7 @@ func (s *S3Client) PresignPut(ctx context.Context, key, contentType string, expi
 }
 
 func (s *S3Client) PresignGet(ctx context.Context, key string, expiry time.Duration) (string, error) {
-	req, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{
+	req, err := s.publicPresign.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	}, s3.WithPresignExpires(expiry))
