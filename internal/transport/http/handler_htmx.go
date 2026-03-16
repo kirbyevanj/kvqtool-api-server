@@ -104,11 +104,7 @@ func (h *htmxHandler) sidebar(ctx *fasthttp.RequestCtx) {
 	if rErr == nil {
 		for _, r := range resources {
 			if r.FolderID == nil {
-				icon := resourceIcon(r.ResourceType)
-				b.WriteString(fmt.Sprintf(
-					`<div class="resource-item" data-id="%s" data-type="%s"><span class="resource-icon">%s</span> %s</div>`,
-					r.ID, r.ResourceType, icon, html.EscapeString(r.Name),
-				))
+				b.WriteString(renderResourceItem(r.ID.String(), r.ResourceType, r.Name))
 			}
 		}
 	}
@@ -131,6 +127,39 @@ func renderFolderNode(b *strings.Builder, f types.FolderNode, projectID string) 
 		renderFolderNode(b, child, projectID)
 	}
 	b.WriteString(`</div>`)
+}
+
+func renderResourceItem(id, resType, name string) string {
+	icon := resourceIcon(resType)
+	escapedName := html.EscapeString(name)
+
+	var typeActions string
+	switch resType {
+	case "media":
+		typeActions = fmt.Sprintf(`<button onclick="playResource('%s')">Play</button>`, id)
+	case "report":
+		typeActions = fmt.Sprintf(`<button onclick="viewReport('%s')">View Charts</button>`, id)
+	case "workflow":
+		typeActions = fmt.Sprintf(`<button onclick="openWorkflow('%s')">Edit</button>`, id)
+	}
+
+	return fmt.Sprintf(
+		`<div class="resource-item" data-id="%s" data-type="%s">`+
+			`<span class="res-label" onclick="onResourceClick('%s','%s')">%s %s</span>`+
+			`<button class="res-menu-btn" onclick="event.stopPropagation();toggleResMenu('%s')">&#8230;</button>`+
+			`<div class="res-menu" id="res-menu-%s" style="display:none">`+
+			`%s`+
+			`<button onclick="renameResource('%s')">Rename</button>`+
+			`<button onclick="deleteResource('%s')">Delete</button>`+
+			`</div></div>`,
+		id, resType,
+		id, resType, icon, escapedName,
+		id,
+		id,
+		typeActions,
+		id,
+		id,
+	)
 }
 
 func resourceIcon(t string) string {
