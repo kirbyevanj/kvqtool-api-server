@@ -67,15 +67,15 @@ func (s *ResourceService) GenerateUploadURL(ctx context.Context, projectID uuid.
 
 func inferResourceType(contentType string) string {
 	if contentType == "" {
-		return "unknown"
+		return "file"
 	}
 	switch {
 	case len(contentType) >= 6 && contentType[:6] == "video/":
-		return "video"
+		return "media"
 	case len(contentType) >= 6 && contentType[:6] == "image/":
-		return "image"
+		return "media"
 	case len(contentType) >= 5 && contentType[:5] == "audio/":
-		return "audio"
+		return "media"
 	default:
 		return "file"
 	}
