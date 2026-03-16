@@ -1,0 +1,60 @@
+package config
+
+import (
+	"log/slog"
+	"os"
+	"strings"
+)
+
+type Config struct {
+	Env         string
+	DSN         string
+	ValkeyURL   string
+	S3Endpoint  string
+	S3Bucket    string
+	S3AccessKey string
+	S3SecretKey string
+	S3Region    string
+	ListenAddr  string
+	LogLevel    slog.Level
+}
+
+func Load() *Config {
+	c := &Config{
+		Env:         envOr("KVQ_ENV", "development"),
+		DSN:         envOr("KVQ_DSN", "postgres://kvq:kvqdev@localhost:5432/kvqtool?sslmode=disable"),
+		ValkeyURL:   envOr("KVQ_VALKEY_URL", "localhost:6379"),
+		S3Endpoint:  envOr("KVQ_S3_ENDPOINT", "http://localhost:9000"),
+		S3Bucket:    envOr("KVQ_S3_BUCKET", "kvq-bucket"),
+		S3AccessKey: envOr("KVQ_S3_ACCESS_KEY", "kvqminio"),
+		S3SecretKey: envOr("KVQ_S3_SECRET_KEY", "kvqminiodev"),
+		S3Region:    envOr("KVQ_S3_REGION", "us-east-1"),
+		ListenAddr:  envOr("KVQ_LISTEN_ADDR", ":8080"),
+		LogLevel:    parseLogLevel(envOr("KVQ_LOG_LEVEL", "debug")),
+	}
+	return c
+}
+
+func (c *Config) IsDev() bool {
+	return c.Env == "development"
+}
+
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+func parseLogLevel(s string) slog.Level {
+	switch strings.ToLower(s) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
