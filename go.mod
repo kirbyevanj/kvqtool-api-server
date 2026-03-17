@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.1
 	github.com/fasthttp/router v1.5.4
 	github.com/google/uuid v1.6.0
-	github.com/kirbyevanj/kvqtool-kvq-models v0.0.0-20260317030242-f616eaf70b1e
+	github.com/kirbyevanj/kvqtool-kvq-models v0.0.0-20260317032918-a8be5c7d3987
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/dialect/pgdialect v1.2.18
 	github.com/uptrace/bun/driver/pgdriver v1.2.18

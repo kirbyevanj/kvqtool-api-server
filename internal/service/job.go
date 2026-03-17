@@ -80,3 +80,30 @@ func (s *JobService) Cancel(ctx context.Context, projectID, jobID uuid.UUID) (*m
 	}
 	return job, nil
 }
+
+func (s *JobService) resolveResourceParams(ctx context.Context, projectID uuid.UUID, dag *types.WorkflowDAG) error {
+	for _, node := range dag.Nodes {
+		if node.Type == "ResourceDownload" || node.Type == "ResourceUpload" {
+			resID := node.Params["resource_id"]
+			if resID == "" {
+				continue
+			}
+			rid, err := uuid.Parse(resID)
+			if err != nil {
+				continue
+			}
+			res := &models.Resource{}
+			err = s.db.NewSelect().Model(res).Where("id = ? AND project_id = ?", rid, projectID).Scan(ctx)
+			if err != nil {
+				return fmt.Errorf("resource %s not found: %w", resID, err)
+			}
+			node.Params["s3_key"] = res.S3Key
+			node.Params["resource_name"] = res.Name
+			node.Params["project_id"] = projectID.String()
+		}
+		if node.Params["project_id"] == "" {
+			node.Params["project_id"] = projectID.String()
+		}
+	}
+	return nil
+}
