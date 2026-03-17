@@ -30,6 +30,7 @@ type ResourceService interface {
 	GenerateDownloadURL(ctx context.Context, projectID, resourceID uuid.UUID) (*types.DownloadURLResponse, error)
 	Update(ctx context.Context, projectID, resourceID uuid.UUID, req types.UpdateResourceRequest) (*models.Resource, error)
 	Delete(ctx context.Context, projectID, resourceID uuid.UUID) error
+	Register(ctx context.Context, projectID uuid.UUID, filename, contentType, s3Key string) (*models.Resource, error)
 }
 
 type WorkflowService interface {

@@ -65,6 +65,27 @@ func (s *ResourceService) GenerateUploadURL(ctx context.Context, projectID uuid.
 	}, nil
 }
 
+func (s *ResourceService) Register(ctx context.Context, projectID uuid.UUID, filename, contentType, s3Key string) (*models.Resource, error) {
+	res := &models.Resource{
+		ProjectID:    projectID,
+		ResourceType: inferResourceType(contentType),
+		Name:         filename,
+		S3Key:        s3Key,
+	}
+
+	head, err := s.s3.Head(ctx, s3Key)
+	if err == nil && head.ContentLength != nil {
+		res.SizeBytes = *head.ContentLength
+	}
+
+	_, err = s.db.NewInsert().Model(res).Returning("*").Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("insert resource: %w", err)
+	}
+	s.log.Info("resource registered", "id", res.ID, "name", filename, "s3_key", s3Key)
+	return res, nil
+}
+
 func inferResourceType(contentType string) string {
 	if contentType == "" {
 		return "file"

@@ -139,3 +139,33 @@ func (h *resourceHandler) delete(ctx *fasthttp.RequestCtx) {
 	}
 	respondJSON(ctx, fasthttp.StatusNoContent, nil)
 }
+
+func (h *resourceHandler) register(ctx *fasthttp.RequestCtx) {
+	pidStr, ok := parseUUID(ctx, "project_id")
+	if !ok {
+		respondError(ctx, 400, "invalid project_id")
+		return
+	}
+	pid, err := uuid.Parse(pidStr)
+	if err != nil {
+		respondError(ctx, 400, "invalid project_id")
+		return
+	}
+
+	var req struct {
+		Filename    string `json:"filename"`
+		ContentType string `json:"content_type"`
+		S3Key       string `json:"s3_key"`
+	}
+	if err := decodeJSON(ctx, &req); err != nil || req.S3Key == "" {
+		respondError(ctx, 400, "filename, content_type, and s3_key required")
+		return
+	}
+
+	resource, err := h.svc.Register(context.TODO(), pid, req.Filename, req.ContentType, req.S3Key)
+	if err != nil {
+		respondError(ctx, 500, err.Error())
+		return
+	}
+	respondJSON(ctx, 201, resource)
+}
