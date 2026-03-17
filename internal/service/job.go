@@ -87,7 +87,7 @@ func (s *JobService) Cancel(ctx context.Context, projectID, jobID uuid.UUID) (*m
 
 func (s *JobService) resolveResourceParams(ctx context.Context, projectID uuid.UUID, dag *types.WorkflowDAG) error {
 	for _, node := range dag.Nodes {
-		if node.Type == "ResourceDownload" || node.Type == "ResourceUpload" {
+		if node.Type == "ResourceDownload" || node.Type == "ResourceUpload" || node.Type == "RemoteEncodeX264" {
 			resID := node.Params["resource_id"]
 			if resID == "" {
 				continue
