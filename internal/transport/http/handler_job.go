@@ -2,9 +2,7 @@ package http
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/fasthttp/websocket"
 	"github.com/kirbyevanj/kvqtool-api-server/internal/domain"
 	"github.com/kirbyevanj/kvqtool-api-server/internal/storage"
 	"github.com/kirbyevanj/kvqtool-kvq-models/types"
@@ -12,11 +10,9 @@ import (
 )
 
 type jobHandler struct {
-	svc    domain.JobService
-	valkey *storage.ValkeyClient
+	svc      domain.JobService
+	temporal *storage.TemporalClient
 }
-
-var wsUpgrader = websocket.FastHTTPUpgrader{}
 
 func (h *jobHandler) list(ctx *fasthttp.RequestCtx) {
 	projectID, err := parseUUIDParam(ctx, "project_id")
@@ -90,27 +86,16 @@ func (h *jobHandler) cancel(ctx *fasthttp.RequestCtx) {
 	respondJSON(ctx, fasthttp.StatusOK, job)
 }
 
-func (h *jobHandler) wsProgress(ctx *fasthttp.RequestCtx) {
-	jobIDStr, ok := parseUUID(ctx, "job_id")
-	if !ok {
-		respondError(ctx, fasthttp.StatusBadRequest, "missing job_id")
+func (h *jobHandler) status(ctx *fasthttp.RequestCtx) {
+	jobID, err := parseUUIDParam(ctx, "job_id")
+	if err != nil {
+		respondError(ctx, fasthttp.StatusBadRequest, err.Error())
 		return
 	}
-	channel := fmt.Sprintf("job:%s:progress", jobIDStr)
-
-	err := wsUpgrader.Upgrade(ctx, func(conn *websocket.Conn) {
-		defer conn.Close()
-		subCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		msgCh, cancelSub := h.valkey.Subscribe(subCtx, channel)
-		defer cancelSub()
-		for msg := range msgCh {
-			if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-				return
-			}
-		}
-	})
+	st, err := h.temporal.GetWorkflowStatus(context.TODO(), jobID.String(), "")
 	if err != nil {
-		respondError(ctx, fasthttp.StatusInternalServerError, "websocket upgrade failed")
+		respondError(ctx, fasthttp.StatusInternalServerError, err.Error())
+		return
 	}
+	respondJSON(ctx, fasthttp.StatusOK, st)
 }

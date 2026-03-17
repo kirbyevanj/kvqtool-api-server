@@ -23,7 +23,7 @@ func NewServer(
 	resources domain.ResourceService,
 	workflows domain.WorkflowService,
 	jobs domain.JobService,
-	valkey *storage.ValkeyClient,
+	temporal *storage.TemporalClient,
 ) *Server {
 	r := router.New()
 	s := &Server{router: r, logger: logger}
@@ -32,9 +32,9 @@ func NewServer(
 	fh := &folderHandler{svc: folders}
 	rh := &resourceHandler{svc: resources}
 	wh := &workflowHandler{svc: workflows}
-	jh := &jobHandler{svc: jobs, valkey: valkey}
+	jh := &jobHandler{svc: jobs, temporal: temporal}
 
-	r.GET("/healthz", s.healthHandler(valkey))
+	r.GET("/healthz", s.healthHandler(temporal))
 
 	v1 := r.Group("/v1")
 
@@ -67,7 +67,7 @@ func NewServer(
 	v1.GET("/projects/{project_id}/jobs/{job_id}", jh.get)
 	v1.POST("/projects/{project_id}/jobs/{job_id}/cancel", jh.cancel)
 
-	r.GET("/v1/jobs/{job_id}/ws", jh.wsProgress)
+	r.GET("/v1/jobs/{job_id}/status", jh.status)
 
 	hx := &htmxHandler{projects: projects, folders: folders, resources: resources}
 	r.GET("/htmx/projects", hx.listProjects)
@@ -88,15 +88,15 @@ func (s *Server) Handler() fasthttp.RequestHandler {
 	return s.handler
 }
 
-func (s *Server) healthHandler(valkey *storage.ValkeyClient) fasthttp.RequestHandler {
+func (s *Server) healthHandler(temporal *storage.TemporalClient) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		valkeyStatus := "ok"
-		if err := valkey.Ping(ctx); err != nil {
-			valkeyStatus = "error"
+		temporalStatus := "ok"
+		if err := temporal.Ping(ctx); err != nil {
+			temporalStatus = "error"
 		}
 		respondJSON(ctx, fasthttp.StatusOK, map[string]string{
-			"status": "ok",
-			"valkey": valkeyStatus,
+			"status":   "ok",
+			"temporal": temporalStatus,
 		})
 	}
 }

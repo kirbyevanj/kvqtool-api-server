@@ -7,32 +7,32 @@ import (
 )
 
 type Config struct {
-	Env         string
-	DSN         string
-	ValkeyURL   string
-	S3Endpoint  string
-	S3Bucket    string
-	S3AccessKey string
-	S3SecretKey string
-	S3Region          string
-	S3PublicEndpoint  string
-	ListenAddr  string
-	LogLevel    slog.Level
+	Env              string
+	DSN              string
+	TemporalHost     string
+	S3Endpoint       string
+	S3Bucket         string
+	S3AccessKey      string
+	S3SecretKey      string
+	S3Region         string
+	S3PublicEndpoint string
+	ListenAddr       string
+	LogLevel         slog.Level
 }
 
 func Load() *Config {
 	c := &Config{
-		Env:         envOr("KVQ_ENV", "development"),
-		DSN:         envOr("KVQ_DSN", "postgres://kvq:kvqdev@localhost:5432/kvqtool?sslmode=disable"),
-		ValkeyURL:   envOr("KVQ_VALKEY_URL", "localhost:6379"),
-		S3Endpoint:  envOr("KVQ_S3_ENDPOINT", "http://localhost:9000"),
-		S3Bucket:    envOr("KVQ_S3_BUCKET", "kvq-bucket"),
-		S3AccessKey: envOr("KVQ_S3_ACCESS_KEY", "kvqminio"),
-		S3SecretKey: envOr("KVQ_S3_SECRET_KEY", "kvqminiodev"),
+		Env:              envOr("KVQ_ENV", "development"),
+		DSN:              envOr("KVQ_DSN", "postgres://kvq:kvqdev@localhost:5432/kvqtool?sslmode=disable"),
+		TemporalHost:     envOr("KVQ_TEMPORAL_HOST", "localhost:7233"),
+		S3Endpoint:       envOr("KVQ_S3_ENDPOINT", "http://localhost:9000"),
+		S3Bucket:         envOr("KVQ_S3_BUCKET", "kvq-bucket"),
+		S3AccessKey:      envOr("KVQ_S3_ACCESS_KEY", "kvqminio"),
+		S3SecretKey:      envOr("KVQ_S3_SECRET_KEY", "kvqminiodev"),
 		S3Region:         envOr("KVQ_S3_REGION", "us-east-1"),
 		S3PublicEndpoint: envOr("KVQ_S3_PUBLIC_ENDPOINT", envOr("KVQ_S3_ENDPOINT", "http://localhost:9000")),
-		ListenAddr:  envOr("KVQ_LISTEN_ADDR", ":8080"),
-		LogLevel:    parseLogLevel(envOr("KVQ_LOG_LEVEL", "debug")),
+		ListenAddr:       envOr("KVQ_LISTEN_ADDR", ":8080"),
+		LogLevel:         parseLogLevel(envOr("KVQ_LOG_LEVEL", "debug")),
 	}
 	return c
 }

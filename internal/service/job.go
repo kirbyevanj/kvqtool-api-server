@@ -2,30 +2,25 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/kirbyevanj/kvqtool-api-server/internal/storage"
-	"github.com/kirbyevanj/kvqtool-kvq-models/messages"
 	"github.com/kirbyevanj/kvqtool-kvq-models/models"
 	"github.com/kirbyevanj/kvqtool-kvq-models/types"
 	"github.com/uptrace/bun"
 )
 
-const jobCancelChannel = "kvq:jobs:cancel"
-
-type cancelJobMessage struct {
-	JobID uuid.UUID `json:"job_id"`
-}
-
 type JobService struct {
-	db     *bun.DB
-	valkey *storage.ValkeyClient
-	log    *slog.Logger
+	db       *bun.DB
+	temporal *storage.TemporalClient
+	log      *slog.Logger
 }
 
-func NewJobService(db *bun.DB, valkey *storage.ValkeyClient, log *slog.Logger) *JobService {
-	return &JobService{db: db, valkey: valkey, log: log}
+func NewJobService(db *bun.DB, temporal *storage.TemporalClient, log *slog.Logger) *JobService {
+	return &JobService{db: db, temporal: temporal, log: log}
 }
 
 func (s *JobService) List(ctx context.Context, projectID uuid.UUID, status string) ([]models.Job, error) {
@@ -53,6 +48,11 @@ func (s *JobService) Create(ctx context.Context, projectID uuid.UUID, req types.
 	if err != nil {
 		return nil, err
 	}
+	var dag types.WorkflowDAG
+	if err := json.Unmarshal(wf.DAGJson, &dag); err != nil {
+		return nil, fmt.Errorf("parse dag: %w", err)
+	}
+
 	job := &models.Job{
 		ProjectID:   projectID,
 		WorkflowID:  req.WorkflowID,
@@ -63,18 +63,13 @@ func (s *JobService) Create(ctx context.Context, projectID uuid.UUID, req types.
 	if err != nil {
 		return nil, err
 	}
-	msg := messages.JobMessage{
-		JobID:      job.ID,
-		ProjectID:  projectID,
-		WorkflowID: req.WorkflowID,
-		DAGJson:    wf.DAGJson,
-		Params:     job.InputParams,
-	}
-	err = s.valkey.PushJob(ctx, messages.JobQueueKey, msg)
+
+	runID, err := s.temporal.StartWorkflow(ctx, job.ID.String(), dag)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("start workflow: %w", err)
 	}
-	return &types.CreateJobResponse{JobID: job.ID, Status: job.Status}, nil
+
+	return &types.CreateJobResponse{JobID: job.ID, Status: job.Status, RunID: runID}, nil
 }
 
 func (s *JobService) Cancel(ctx context.Context, projectID, jobID uuid.UUID) (*models.Job, error) {
@@ -83,6 +78,5 @@ func (s *JobService) Cancel(ctx context.Context, projectID, jobID uuid.UUID) (*m
 	if err != nil {
 		return nil, err
 	}
-	_ = s.valkey.Publish(ctx, jobCancelChannel, cancelJobMessage{JobID: jobID})
 	return job, nil
 }

@@ -35,20 +35,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	valkeyClient, err := storage.NewValkeyClient(cfg.ValkeyURL, logger)
+	temporalClient, err := storage.NewTemporalClient(cfg.TemporalHost, logger)
 	if err != nil {
-		logger.Error("valkey init failed", "err", err)
+		logger.Error("temporal init failed", "err", err)
 		os.Exit(1)
 	}
-	defer valkeyClient.Close()
+	defer temporalClient.Close()
 
 	projects := service.NewProjectService(db, s3Client, logger)
 	folders := service.NewFolderService(db, logger)
 	resources := service.NewResourceService(db, s3Client, logger)
 	workflows := service.NewWorkflowService(db, logger)
-	jobs := service.NewJobService(db, valkeyClient, logger)
+	jobs := service.NewJobService(db, temporalClient, logger)
 
-	srv := transport.NewServer(logger, projects, folders, resources, workflows, jobs, valkeyClient)
+	srv := transport.NewServer(logger, projects, folders, resources, workflows, jobs, temporalClient)
 
 	logger.Info("starting api-server", "addr", cfg.ListenAddr)
 
