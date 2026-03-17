@@ -56,6 +56,7 @@ func NewServer(
 	v1.PUT("/projects/{project_id}/resources/{resource_id}", rh.update)
 	v1.DELETE("/projects/{project_id}/resources/{resource_id}", rh.delete)
 	v1.POST("/projects/{project_id}/resources/register", rh.register)
+	v1.POST("/projects/{project_id}/resources/{resource_id}/copy", rh.copy)
 
 	v1.GET("/projects/{project_id}/workflows", wh.list)
 	v1.POST("/projects/{project_id}/workflows", wh.create)

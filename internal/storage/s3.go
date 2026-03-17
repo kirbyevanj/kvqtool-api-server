@@ -87,6 +87,16 @@ func (s *S3Client) Delete(ctx context.Context, key string) error {
 	return err
 }
 
+func (s *S3Client) Copy(ctx context.Context, srcKey, dstKey string) error {
+	copySource := s.bucket + "/" + srcKey
+	_, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
+		Bucket:     aws.String(s.bucket),
+		CopySource: aws.String(copySource),
+		Key:        aws.String(dstKey),
+	})
+	return err
+}
+
 func (s *S3Client) DeletePrefix(ctx context.Context, prefix string) error {
 	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
 		Bucket: aws.String(s.bucket),

@@ -169,3 +169,22 @@ func (h *resourceHandler) register(ctx *fasthttp.RequestCtx) {
 	}
 	respondJSON(ctx, 201, resource)
 }
+
+func (h *resourceHandler) copy(ctx *fasthttp.RequestCtx) {
+	pid, err := parseUUIDParam(ctx, "project_id")
+	if err != nil {
+		respondError(ctx, 400, err.Error())
+		return
+	}
+	rid, err := parseUUIDParam(ctx, "resource_id")
+	if err != nil {
+		respondError(ctx, 400, err.Error())
+		return
+	}
+	resource, err := h.svc.Copy(context.TODO(), pid, rid)
+	if err != nil {
+		respondError(ctx, 500, err.Error())
+		return
+	}
+	respondJSON(ctx, 201, resource)
+}

@@ -65,6 +65,36 @@ func (s *ResourceService) GenerateUploadURL(ctx context.Context, projectID uuid.
 	}, nil
 }
 
+func (s *ResourceService) Copy(ctx context.Context, projectID, resourceID uuid.UUID) (*models.Resource, error) {
+	src := &models.Resource{}
+	err := s.db.NewSelect().Model(src).Where("id = ? AND project_id = ?", resourceID, projectID).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resource not found: %w", err)
+	}
+
+	newID := uuid.New()
+	newKey := fmt.Sprintf("projects/%s/media/%s-%s", projectID, newID, src.Name)
+
+	if err := s.s3.Copy(ctx, src.S3Key, newKey); err != nil {
+		return nil, fmt.Errorf("s3 copy: %w", err)
+	}
+
+	copy := &models.Resource{
+		ProjectID:    projectID,
+		FolderID:     src.FolderID,
+		ResourceType: src.ResourceType,
+		Name:         src.Name + " (copy)",
+		S3Key:        newKey,
+		SizeBytes:    src.SizeBytes,
+		Metadata:     src.Metadata,
+	}
+	_, err = s.db.NewInsert().Model(copy).Returning("*").Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("insert copy: %w", err)
+	}
+	return copy, nil
+}
+
 func (s *ResourceService) Register(ctx context.Context, projectID uuid.UUID, filename, contentType, s3Key string) (*models.Resource, error) {
 	res := &models.Resource{
 		ProjectID:    projectID,

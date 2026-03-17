@@ -31,6 +31,7 @@ type ResourceService interface {
 	Update(ctx context.Context, projectID, resourceID uuid.UUID, req types.UpdateResourceRequest) (*models.Resource, error)
 	Delete(ctx context.Context, projectID, resourceID uuid.UUID) error
 	Register(ctx context.Context, projectID uuid.UUID, filename, contentType, s3Key string) (*models.Resource, error)
+	Copy(ctx context.Context, projectID, resourceID uuid.UUID) (*models.Resource, error)
 }
 
 type WorkflowService interface {

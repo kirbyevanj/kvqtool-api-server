@@ -150,6 +150,8 @@ func renderResourceItem(id, resType, name string) string {
 			`<button class="res-menu-btn" onclick="event.stopPropagation();toggleResMenu('%s')">&#8230;</button>`+
 			`<div class="res-menu" id="res-menu-%s" style="display:none">`+
 			`%s`+
+			`<button onclick="downloadResource('%s')">Download</button>`+
+			`<button onclick="copyResource('%s','%s')">Duplicate</button>`+
 			`<button onclick="renameResource('%s')">Rename</button>`+
 			`<button onclick="deleteResource('%s')">Delete</button>`+
 			`</div></div>`,
@@ -161,6 +163,8 @@ func renderResourceItem(id, resType, name string) string {
 		id,
 		id,
 		typeActions,
+		id,
+		id, escapedName,
 		id,
 		id,
 	)
@@ -206,11 +210,13 @@ func (h *htmxHandler) workflowList(ctx *fasthttp.RequestCtx) {
 				`<button class="res-menu-btn" onclick="event.stopPropagation();toggleWfMenu('%s')">&#8230;</button>`+
 				`<div class="res-menu" id="wf-menu-%s" style="display:none">`+
 				`<button onclick="editWorkflow('%s')">Edit</button>`+
+				`<button onclick="downloadWorkflow('%s')">Download</button>`+
 				`<button onclick="copyWorkflow('%s')">Duplicate</button>`+
 				`<button onclick="deleteWorkflow('%s','%s')">Delete</button>`+
 				`</div></div>`,
 			w.ID, w.ID, w.ID,
 			eName,
+			w.ID,
 			w.ID,
 			w.ID,
 			w.ID,
