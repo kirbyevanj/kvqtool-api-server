@@ -70,10 +70,11 @@ func NewServer(
 
 	r.GET("/v1/jobs/{job_id}/status", jh.status)
 
-	hx := &htmxHandler{projects: projects, folders: folders, resources: resources}
+	hx := &htmxHandler{projects: projects, folders: folders, resources: resources, workflows: workflows}
 	r.GET("/htmx/projects", hx.listProjects)
 	r.POST("/htmx/projects", hx.createProject)
 	r.GET("/htmx/projects/{project_id}/sidebar", hx.sidebar)
+	r.GET("/htmx/projects/{project_id}/workflows-list", hx.workflowList)
 
 	s.handler = mw.Chain(r.Handler,
 		mw.RequestID,

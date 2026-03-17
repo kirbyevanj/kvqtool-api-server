@@ -16,6 +16,7 @@ type htmxHandler struct {
 	projects  domain.ProjectService
 	folders   domain.FolderService
 	resources domain.ResourceService
+	workflows domain.WorkflowService
 }
 
 func (h *htmxHandler) listProjects(ctx *fasthttp.RequestCtx) {
@@ -176,4 +177,44 @@ func resourceIcon(t string) string {
 	default:
 		return "📄"
 	}
+}
+
+func (h *htmxHandler) workflowList(ctx *fasthttp.RequestCtx) {
+	pidStr, ok := parseUUID(ctx, "project_id")
+	if !ok {
+		ctx.SetStatusCode(400)
+		return
+	}
+	projectID, err := uuid.Parse(pidStr)
+	if err != nil {
+		ctx.SetStatusCode(400)
+		return
+	}
+
+	workflows, err := h.workflows.List(context.TODO(), projectID)
+	if err != nil {
+		ctx.SetStatusCode(500)
+		return
+	}
+
+	var b strings.Builder
+	for _, w := range workflows {
+		b.WriteString(fmt.Sprintf(
+			`<div class="resource-item" data-id="%s" data-type="workflow" ondblclick="loadSelectedWorkflow('%s')">` +
+				`<span class="res-label">%s %s</span>` +
+				`<button class="res-menu-btn" onclick="event.stopPropagation();deleteWorkflow('%s','%s')">✕</button>` +
+				`</div>`,
+			w.ID, w.ID,
+			"⚙️", html.EscapeString(w.Name),
+			w.ID, html.EscapeString(w.Name),
+		))
+	}
+
+	if len(workflows) == 0 {
+		b.WriteString(`<p style="padding:8px 12px;color:var(--text-muted);font-size:12px">No workflows yet.</p>`)
+	}
+
+	ctx.SetContentType("text/html")
+	ctx.SetStatusCode(200)
+	ctx.SetBodyString(b.String())
 }
