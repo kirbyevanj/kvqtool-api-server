@@ -53,6 +53,10 @@ func (s *JobService) Create(ctx context.Context, projectID uuid.UUID, req types.
 		return nil, fmt.Errorf("parse dag: %w", err)
 	}
 
+	if err := s.resolveResourceParams(ctx, projectID, &dag); err != nil {
+		return nil, fmt.Errorf("resolve resources: %w", err)
+	}
+
 	job := &models.Job{
 		ProjectID:   projectID,
 		WorkflowID:  req.WorkflowID,
