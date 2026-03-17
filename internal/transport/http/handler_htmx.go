@@ -201,7 +201,7 @@ func (h *htmxHandler) workflowList(ctx *fasthttp.RequestCtx) {
 	for _, w := range workflows {
 		eName := html.EscapeString(w.Name)
 		b.WriteString(fmt.Sprintf(
-			`<div class="resource-item" data-id="%s" data-type="workflow" ondblclick="editWorkflow('%s')">`+
+			`<div class="resource-item" data-id="%s" data-type="workflow" ondblclick="editWorkflow('%s')" oncontextmenu="event.preventDefault();toggleWfMenu('%s')">`+
 				`<span class="res-label">⚙️ %s</span>`+
 				`<button class="res-menu-btn" onclick="event.stopPropagation();toggleWfMenu('%s')">&#8230;</button>`+
 				`<div class="res-menu" id="wf-menu-%s" style="display:none">`+
@@ -209,7 +209,7 @@ func (h *htmxHandler) workflowList(ctx *fasthttp.RequestCtx) {
 				`<button onclick="copyWorkflow('%s')">Duplicate</button>`+
 				`<button onclick="deleteWorkflow('%s','%s')">Delete</button>`+
 				`</div></div>`,
-			w.ID, w.ID,
+			w.ID, w.ID, w.ID,
 			eName,
 			w.ID,
 			w.ID,

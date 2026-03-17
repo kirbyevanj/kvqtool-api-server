@@ -71,6 +71,7 @@ func (s *WorkflowService) Update(ctx context.Context, projectID, workflowID uuid
 }
 
 func (s *WorkflowService) Delete(ctx context.Context, projectID, workflowID uuid.UUID) error {
+	s.db.NewDelete().Model((*models.Job)(nil)).Where("workflow_id = ? AND project_id = ?", workflowID, projectID).Exec(ctx)
 	_, err := s.db.NewDelete().Model((*models.WorkflowDefinition)(nil)).Where("id = ? AND project_id = ?", workflowID, projectID).Exec(ctx)
 	return err
 }
