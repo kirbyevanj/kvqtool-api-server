@@ -144,7 +144,7 @@ func renderResourceItem(id, resType, name string) string {
 	}
 
 	return fmt.Sprintf(
-		`<div class="resource-item" data-id="%s" data-type="%s">`+
+		`<div class="resource-item" data-id="%s" data-type="%s" draggable="true" ondragstart="onResDragStart(event,'%s','%s')">`+
 			`<span class="res-label" ondblclick="onResourceClick('%s','%s')">%s %s</span>`+
 			`<button class="res-menu-btn" onclick="event.stopPropagation();toggleResMenu('%s')">&#8230;</button>`+
 			`<div class="res-menu" id="res-menu-%s" style="display:none">`+
@@ -153,6 +153,7 @@ func renderResourceItem(id, resType, name string) string {
 			`<button onclick="deleteResource('%s')">Delete</button>`+
 			`</div></div>`,
 		id, resType,
+		id, escapedName,
 		id, resType, icon, escapedName,
 		id,
 		id,
