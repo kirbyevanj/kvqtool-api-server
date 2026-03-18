@@ -107,31 +107,59 @@ var nodeTypesWithResourceID = map[string]bool{
 	types.ActivityRemoteSegmentMedia: true,
 }
 
+// resourceParamMappings defines extra resource_id-style params beyond the standard "resource_id".
+// Maps node type → list of (paramKey, s3KeyTarget) pairs.
+var resourceParamMappings = map[string][][2]string{
+	types.ActivityRemoteFileMetric: {
+		{"reference_resource_id", "reference_s3_key"},
+		{"distorted_resource_id", "distorted_s3_key"},
+	},
+}
+
 func (s *JobService) resolveResourceParams(ctx context.Context, projectID uuid.UUID, dag *types.WorkflowDAG) error {
 	for _, node := range dag.Nodes {
-		if nodeTypesWithResourceID[node.Type] {
-			resID := node.Params["resource_id"]
-			if resID == "" {
-				continue
-			}
-			rid, err := uuid.Parse(resID)
-			if err != nil {
-				continue
-			}
-			res := &models.Resource{}
-			err = s.db.NewSelect().Model(res).Where("id = ? AND project_id = ?", rid, projectID).Scan(ctx)
-			if err != nil {
-				return fmt.Errorf("resource %s not found: %w", resID, err)
-			}
-			node.Params["s3_key"] = res.S3Key
-			node.Params["resource_name"] = res.Name
-		}
 		if node.Params == nil {
 			node.Params = make(map[string]string)
 		}
 		if node.Params["project_id"] == "" {
 			node.Params["project_id"] = projectID.String()
 		}
+
+		if !nodeTypesWithResourceID[node.Type] {
+			continue
+		}
+
+		// Standard single resource_id → s3_key mapping.
+		if resID := node.Params["resource_id"]; resID != "" {
+			if res, err := s.lookupResource(ctx, projectID, resID); err == nil {
+				node.Params["s3_key"] = res.S3Key
+				node.Params["resource_name"] = res.Name
+			}
+		}
+
+		// Additional per-node-type resource mappings (e.g. reference/distorted for metrics).
+		for _, mapping := range resourceParamMappings[node.Type] {
+			srcKey, dstKey := mapping[0], mapping[1]
+			if resID := node.Params[srcKey]; resID != "" {
+				if res, err := s.lookupResource(ctx, projectID, resID); err == nil {
+					node.Params[dstKey] = res.S3Key
+				} else {
+					return fmt.Errorf("resource %s (%s) not found: %w", resID, srcKey, err)
+				}
+			}
+		}
 	}
 	return nil
+}
+
+func (s *JobService) lookupResource(ctx context.Context, projectID uuid.UUID, resIDStr string) (*models.Resource, error) {
+	rid, err := uuid.Parse(resIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid resource id %q: %w", resIDStr, err)
+	}
+	res := &models.Resource{}
+	if err := s.db.NewSelect().Model(res).Where("id = ? AND project_id = ?", rid, projectID).Scan(ctx); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
