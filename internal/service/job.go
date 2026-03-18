@@ -57,6 +57,18 @@ func (s *JobService) Create(ctx context.Context, projectID uuid.UUID, req types.
 		return nil, fmt.Errorf("resolve resources: %w", err)
 	}
 
+	// Merge runtime InputParams into GlobalInputs defaults.
+	if len(req.InputParams) > 0 && dag.GlobalInputs != nil {
+		var inputValues map[string]string
+		if json.Unmarshal(req.InputParams, &inputValues) == nil {
+			for key, val := range inputValues {
+				if gi, ok := dag.GlobalInputs[key]; ok {
+					gi.Default = val
+				}
+			}
+		}
+	}
+
 	job := &models.Job{
 		ProjectID:   projectID,
 		WorkflowID:  req.WorkflowID,
@@ -85,9 +97,19 @@ func (s *JobService) Cancel(ctx context.Context, projectID, jobID uuid.UUID) (*m
 	return job, nil
 }
 
+// nodeTypesWithResourceID lists all node types that can reference a resource_id.
+var nodeTypesWithResourceID = map[string]bool{
+	types.ActivityResDownload:        true,
+	types.ActivityResUpload:          true,
+	types.ActivityX264RemoteTranscode: true,
+	types.ActivityRemoteFileMetric:   true,
+	types.ActivityRemoteSceneCut:     true,
+	types.ActivityRemoteSegmentMedia: true,
+}
+
 func (s *JobService) resolveResourceParams(ctx context.Context, projectID uuid.UUID, dag *types.WorkflowDAG) error {
 	for _, node := range dag.Nodes {
-		if node.Type == "ResourceDownload" || node.Type == "ResourceUpload" || node.Type == "RemoteEncodeX264" {
+		if nodeTypesWithResourceID[node.Type] {
 			resID := node.Params["resource_id"]
 			if resID == "" {
 				continue
@@ -103,7 +125,9 @@ func (s *JobService) resolveResourceParams(ctx context.Context, projectID uuid.U
 			}
 			node.Params["s3_key"] = res.S3Key
 			node.Params["resource_name"] = res.Name
-			node.Params["project_id"] = projectID.String()
+		}
+		if node.Params == nil {
+			node.Params = make(map[string]string)
 		}
 		if node.Params["project_id"] == "" {
 			node.Params["project_id"] = projectID.String()
