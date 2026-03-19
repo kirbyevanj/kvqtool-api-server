@@ -127,6 +127,8 @@ func inferResourceType(contentType string) string {
 		return "media"
 	case len(contentType) >= 5 && contentType[:5] == "audio/":
 		return "media"
+	case contentType == "application/x-metric-report":
+		return "report"
 	default:
 		return "file"
 	}

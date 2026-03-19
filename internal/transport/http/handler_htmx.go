@@ -140,6 +140,10 @@ func renderResourceItem(id, resType, name string) string {
 		typeActions = fmt.Sprintf(`<button onclick="onResourceClick('%s','media')">Play</button><button onclick="addToCompare('%s','%s')">Add to Compare</button>`, id, id, escapedName)
 	case "report":
 		typeActions = fmt.Sprintf(`<button onclick="viewReport('%s')">View Charts</button>`, id)
+	case "file":
+		if strings.HasSuffix(name, ".json") {
+			typeActions = fmt.Sprintf(`<button onclick="viewReport('%s')">View Charts</button>`, id)
+		}
 	case "workflow":
 		typeActions = fmt.Sprintf(`<button onclick="openWorkflow('%s')">Edit</button>`, id)
 	}
